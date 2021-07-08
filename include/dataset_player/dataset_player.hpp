@@ -34,6 +34,10 @@ class DatasetPlayer : public rclcpp::Node {
   double last_dataset_stamp_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_broadcaster_;
+
+  // params
+  double laser_front_laser_resolution_;
+  double robot_front_laser_max_;
   
  public:
   
@@ -46,6 +50,8 @@ class DatasetPlayer : public rclcpp::Node {
   rcl_interfaces::msg::SetParametersResult update_callback(const std::vector<rclcpp::Parameter>& parameters);
   template <typename T>
   size_t parse_as_vector(const std::string& line, size_t pos, size_t size, std::vector<T> *vec);
+  void set_params();
+  void parse_params(const std::string& line, size_t pos);
 };
 
 }  // namespace toolkit

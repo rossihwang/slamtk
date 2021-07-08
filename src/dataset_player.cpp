@@ -42,6 +42,8 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
   base_scan_tf.transform.rotation.w = 1;
   static_broadcaster_->sendTransform(base_scan_tf);
 
+  set_params();
+
   main_thread_ = std::thread{[this]() -> void  {
     std::fstream dataset;
     dataset.open(dataset_file_, std::ios::in);
@@ -91,8 +93,10 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
             scan_pub_->publish(scan);
             break;
           }
-        case DataType::COMMENT:
         case DataType::PARAM:
+          parse_params(line, pos);
+          break;
+        case DataType::COMMENT:
         default:
           std::cout << "unknown" << std::endl;
       }
@@ -128,7 +132,7 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   RCLCPP_INFO(get_logger(), "%s", line.c_str());
 
   size_t end = line.find(" ", pos + 1);
-  int num = std::stoi(line.substr(pos, end));
+  int num = std::stoi(line.substr(pos, end - pos));
 
   std::vector<float> ranges;
   end = parse_as_vector<float>(line, end, num, &ranges);
@@ -160,12 +164,20 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   // RCLCPP_INFO(get_logger(), "ros_stamp: %u, dataset_stamp: %f", last_ros_stamp_.nanoseconds(), last_dataset_stamp_);
   
   scan.header.frame_id = scan_frame_;
-  scan.angle_increment = 0.017453292519943295;
+  scan.angle_increment = 0.017453292519943295 * laser_front_laser_resolution_;
+  // if (num == 361) {
+  //   scan.angle_min = -M_PI / 2;
+  //   scan.angle_max = M_PI / 2;
+  // } else {
+  //   scan.angle_min = -M_PI / 2;
+  //   scan.angle_max = M_PI / 2 - 0.017453292519943295 * laser_front_laser_resolution_;
+  // }
   scan.angle_min = -M_PI / 2;
-  scan.angle_max = M_PI / 2 - 0.017453292519943295;
+  scan.angle_max = scan.angle_min + ((num - 1) * 0.017453292519943295 * laser_front_laser_resolution_);
+  
   scan.scan_time = 0.001;
   scan.range_min = 0.0;
-  scan.range_max = 20;
+  scan.range_max = robot_front_laser_max_;
   scan.ranges = ranges;
   // scan.intensities = ;
   
@@ -253,10 +265,10 @@ size_t DatasetPlayer::parse_as_vector(const std::string& line, size_t pos, size_
     // RCLCPP_INFO(get_logger(), "prev: %d, curr: %d", prev, curr);
     if (curr != std::string::npos) {
       // RCLCPP_INFO(get_logger(), "1: %s", line.substr(prev, curr - prev).c_str());
-      (*vec)[i] = static_cast<T>(std::stod(line.substr(prev, curr)));
+      (*vec)[i] = static_cast<T>(std::stod(line.substr(prev, curr - prev)));  // FIXME
     } else {  // last data of the line
       // RCLCPP_INFO(get_logger(), "2: %s", line.substr(prev, line.size() - prev).c_str());
-      (*vec)[i] = static_cast<T>(std::stod(line.substr(prev, line.size() - 1)));
+      (*vec)[i] = static_cast<T>(std::stod(line.substr(prev, line.size() - prev)));
       break;
     }
     if (size <= ++i) {
@@ -270,5 +282,28 @@ size_t DatasetPlayer::parse_as_vector(const std::string& line, size_t pos, size_
   return curr;
 }
 
+void DatasetPlayer::set_params() {
+  laser_front_laser_resolution_ = 1.0;
+  robot_front_laser_max_ = 20.0;
+}
+
+void DatasetPlayer::parse_params(const std::string& line, size_t pos) {
+  size_t key_end = line.find(" ", pos + 1);
+  std::string key = line.substr(pos + 1, key_end - pos - 1);  // FIXME: +1/-1 to strip the space
+
+  if (key == "laser_front_laser_resolution") {
+    size_t value_end = line.find(" ", key_end + 1);
+    double value = std::stod(line.substr(key_end + 1,  value_end - key_end));
+    laser_front_laser_resolution_ = value;
+    RCLCPP_INFO(get_logger(), "%s, %f", key.c_str(), value);
+  } else if (key == "robot_front_laser_max") {
+    size_t value_end = line.find(" ", key_end + 1);
+    double value = std::stod(line.substr(key_end + 1,  value_end - key_end));
+    robot_front_laser_max_ = value;
+    RCLCPP_INFO(get_logger(), "%s, %f", key.c_str(), value);
+  }
+
+ 
+}
 
 }  // namespace toolkit
