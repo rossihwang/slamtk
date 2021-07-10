@@ -20,6 +20,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(rosgraph_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3)
 find_package(tf2_ros REQUIRED)
@@ -31,6 +32,7 @@ set(DEPS
   rclcpp
   sensor_msgs
   nav_msgs
+  rosgraph_msgs
   Eigen3
   tf2_ros
   )

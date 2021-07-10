@@ -5,6 +5,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <rosgraph_msgs/msg/clock.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
@@ -22,15 +23,14 @@ class DatasetPlayer : public rclcpp::Node {
  private:
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
+  rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_;
   std::string scan_frame_;
   std::string base_frame_;
   std::string odom_frame_;
   std::thread main_thread_;
   std::atomic<bool> canceled_;
-  rclcpp::Time last_stamp_;
   std::string dataset_file_;
-  rclcpp::Time last_ros_stamp_;
   double last_dataset_stamp_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_broadcaster_;

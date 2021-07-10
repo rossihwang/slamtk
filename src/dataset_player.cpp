@@ -17,20 +17,19 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
     base_frame_("base_footprint"),
     odom_frame_("odom"),
     canceled_(false),
-    last_ros_stamp_(0, 0),
     last_dataset_stamp_(0.0) {
 
   create_parameter();
 
   scan_pub_ = create_publisher<sensor_msgs::msg::LaserScan>("/scan", 10);
   odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("/odom", 10);
-
+  clock_pub_ = create_publisher<rosgraph_msgs::msg::Clock>("/clock", 10);
 
   tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
   static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
   geometry_msgs::msg::TransformStamped base_scan_tf;
-  base_scan_tf.header.stamp = now();
+  base_scan_tf.header.stamp = rclcpp::Time(1435.369999 * 1000000000);
   base_scan_tf.header.frame_id = base_frame_;
   base_scan_tf.child_frame_id = scan_frame_;
   base_scan_tf.transform.translation.x = 0;
@@ -65,10 +64,8 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
             if (!state) {
               break;
             }
-            while (now() < odom.header.stamp) {
-              std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-            odom_pub_->publish(odom);
+            // odom_pub_->publish(odom);
+            
             geometry_msgs::msg::TransformStamped tf_stamped;
             tf_stamped.header = odom.header;
             tf_stamped.child_frame_id = odom.child_frame_id;
@@ -87,9 +84,6 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
             if (!state) {
               break;
             }
-            while(now() < scan.header.stamp) {
-              std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
             scan_pub_->publish(scan);
             break;
           }
@@ -100,6 +94,7 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
         default:
           std::cout << "unknown" << std::endl;
       }
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     dataset.close();
     return;
@@ -146,22 +141,19 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   // }
   // std::cout << std::endl;
 
-  if (last_ros_stamp_.nanoseconds() == 0) {
-    scan.header.stamp = now();
+  if (vec[6] < last_dataset_stamp_) {
+    // FIXME: so far we don't handle this situation
+    RCLCPP_WARN(get_logger(), "timestamp in wrong order, last: %f, new: %f", last_dataset_stamp_, vec[6]);
+    scan.header.stamp = rclcpp::Time(vec[6] * 1000000000);
   } else {
-    if (vec[6] < last_dataset_stamp_) {
-      // RCLCPP_WARN(get_logger(), "current timestamp(%f) is earlier than last one(%f)", vec[6], last_dataset_stamp_);
-      // return std::make_tuple(false, scan);
-      // FIXME: currently just ignore the data in wrong order
-      scan.header.stamp = last_ros_stamp_;
-    } else {
-      scan.header.stamp = rclcpp::Time(last_ros_stamp_.nanoseconds() + rclcpp::Duration((vec[6] - last_dataset_stamp_) * 1000000000).nanoseconds());
-    }
-    
+    scan.header.stamp = rclcpp::Time(vec[6] * 1000000000);
   }
-  last_ros_stamp_ = scan.header.stamp;
   last_dataset_stamp_ = vec[6];
   
+  rosgraph_msgs::msg::Clock clock;
+  clock.clock = scan.header.stamp;
+  clock_pub_->publish(clock);
+
   scan.header.frame_id = scan_frame_;
   scan.angle_increment = 0.017453292519943295 * laser_front_laser_resolution_;
   scan.angle_min = -M_PI / 2;
@@ -184,17 +176,19 @@ std::tuple<bool, nav_msgs::msg::Odometry> DatasetPlayer::parse_odom(const std::s
   
   nav_msgs::msg::Odometry odom;
   odom.header.frame_id = odom_frame_;
-  if (last_ros_stamp_.nanoseconds() == 0) {
-    odom.header.stamp = now();
+
+  if (vec[6] < last_dataset_stamp_) {
+    // FIXME: so far we don't handle this situation
+    RCLCPP_WARN(get_logger(), "timestamp in wrong order, last: %f, new: %f", last_dataset_stamp_, vec[6]);
+    odom.header.stamp = rclcpp::Time(vec[6] * 1000000000);
   } else {
-    if (vec[6] < last_dataset_stamp_) {
-      RCLCPP_WARN(get_logger(), "current timestamp(%f) is earlier than last one(%f)", vec[6], last_dataset_stamp_);
-      return std::make_tuple(false, odom);
-    }
-    odom.header.stamp = rclcpp::Time(last_ros_stamp_.nanoseconds() + rclcpp::Duration((vec[6] - last_dataset_stamp_) * 1000000000).nanoseconds());
+    odom.header.stamp = rclcpp::Time(vec[6] * 1000000000);
   }
-  last_ros_stamp_ = odom.header.stamp;
   last_dataset_stamp_ = vec[6];
+
+  rosgraph_msgs::msg::Clock clock;
+  clock.clock = odom.header.stamp;
+  clock_pub_->publish(clock);
   
   odom.child_frame_id = base_frame_;
 
@@ -275,7 +269,7 @@ size_t DatasetPlayer::parse_as_vector(const std::string& line, size_t pos, size_
 
 void DatasetPlayer::set_params() {
   laser_front_laser_resolution_ = 1.0;
-  robot_front_laser_max_ = 20.0;
+  robot_front_laser_max_ = 50.0;
 }
 
 void DatasetPlayer::parse_params(const std::string& line, size_t pos) {
