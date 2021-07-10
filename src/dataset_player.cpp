@@ -114,7 +114,7 @@ std::tuple<DataType, size_t> DatasetPlayer::check_line_type(const std::string& l
   size_t pos = 0;
   pos = line.find(" ");
   if (pos != std::string::npos) {
-    auto type = line.substr(0, pos);
+    auto type = line.substr(0, pos - 0);
     if (type == "#") {
       return std::make_tuple(DataType::COMMENT, pos);
     } else if (type == "PARAM") {
@@ -132,10 +132,10 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   RCLCPP_INFO(get_logger(), "%s", line.c_str());
 
   size_t end = line.find(" ", pos + 1);
-  int num = std::stoi(line.substr(pos, end - pos));
+  int num_readings = std::stoi(line.substr(pos, end - pos));
 
   std::vector<float> ranges;
-  end = parse_as_vector<float>(line, end, num, &ranges);
+  end = parse_as_vector<float>(line, end, num_readings, &ranges);
 
   sensor_msgs::msg::LaserScan scan;
 
@@ -161,19 +161,11 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   }
   last_ros_stamp_ = scan.header.stamp;
   last_dataset_stamp_ = vec[6];
-  // RCLCPP_INFO(get_logger(), "ros_stamp: %u, dataset_stamp: %f", last_ros_stamp_.nanoseconds(), last_dataset_stamp_);
   
   scan.header.frame_id = scan_frame_;
   scan.angle_increment = 0.017453292519943295 * laser_front_laser_resolution_;
-  // if (num == 361) {
-  //   scan.angle_min = -M_PI / 2;
-  //   scan.angle_max = M_PI / 2;
-  // } else {
-  //   scan.angle_min = -M_PI / 2;
-  //   scan.angle_max = M_PI / 2 - 0.017453292519943295 * laser_front_laser_resolution_;
-  // }
   scan.angle_min = -M_PI / 2;
-  scan.angle_max = scan.angle_min + ((num - 1) * 0.017453292519943295 * laser_front_laser_resolution_);
+  scan.angle_max = scan.angle_min + ((num_readings - 1) * 0.017453292519943295 * laser_front_laser_resolution_);
   
   scan.scan_time = 0.001;
   scan.range_min = 0.0;
@@ -203,7 +195,6 @@ std::tuple<bool, nav_msgs::msg::Odometry> DatasetPlayer::parse_odom(const std::s
   }
   last_ros_stamp_ = odom.header.stamp;
   last_dataset_stamp_ = vec[6];
-  // RCLCPP_INFO(get_logger(), "ros_stamp: %u, dataset_stamp: %f", last_ros_stamp_.nanoseconds(), last_dataset_stamp_);
   
   odom.child_frame_id = base_frame_;
 
