@@ -6,6 +6,7 @@
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
@@ -44,7 +45,7 @@ class DatasetPlayer : public rclcpp::Node {
   DatasetPlayer(const std::string &name, rclcpp::NodeOptions const &options);
   ~DatasetPlayer();
   std::tuple<DataType, size_t> check_line_type(const std::string& line);
-  std::tuple<bool, sensor_msgs::msg::LaserScan> parse_laser(const std::string& line, size_t pos);
+  std::tuple<bool, sensor_msgs::msg::LaserScan, nav_msgs::msg::Odometry> parse_laser(const std::string& line, size_t pos);
   std::tuple<bool, nav_msgs::msg::Odometry> parse_odom(const std::string& line,  size_t pos);
   void create_parameter();
   rcl_interfaces::msg::SetParametersResult update_callback(const std::vector<rclcpp::Parameter>& parameters);
@@ -52,6 +53,7 @@ class DatasetPlayer : public rclcpp::Node {
   size_t parse_as_vector(const std::string& line, size_t pos, size_t size, std::vector<T> *vec);
   void set_params();
   void parse_params(const std::string& line, size_t pos);
+  geometry_msgs::msg::Pose xyt_to_pose(double x, double y, double theta);
 };
 
 }  // namespace toolkit

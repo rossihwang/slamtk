@@ -80,11 +80,13 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
           {
             bool state;
             sensor_msgs::msg::LaserScan scan;
-            std::tie(state, scan)  = parse_laser(line, pos);
+            nav_msgs::msg::Odometry odom;
+            std::tie(state, scan, odom)  = parse_laser(line, pos);
             if (!state) {
               break;
             }
             scan_pub_->publish(scan);
+            odom_pub_->publish(odom);
             break;
           }
         case DataType::PARAM:
@@ -123,7 +125,7 @@ std::tuple<DataType, size_t> DatasetPlayer::check_line_type(const std::string& l
   return std::make_tuple(DataType::NONE, 0);
 }
 
-std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const std::string& line, size_t pos) {
+std::tuple<bool, sensor_msgs::msg::LaserScan, nav_msgs::msg::Odometry> DatasetPlayer::parse_laser(const std::string& line, size_t pos) {
   RCLCPP_INFO(get_logger(), "%s", line.c_str());
 
   size_t end = line.find(" ", pos + 1);
@@ -133,6 +135,7 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   end = parse_as_vector<float>(line, end, num_readings, &ranges);
 
   sensor_msgs::msg::LaserScan scan;
+  nav_msgs::msg::Odometry odom;
 
   std::vector<double> vec;
   parse_as_vector<double>(line, end, 7, &vec);
@@ -140,7 +143,7 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   //   std::cout << v << ", ";
   // }
   // std::cout << std::endl;
-
+  
   if (vec[6] < last_dataset_stamp_) {
     // FIXME: so far we don't handle this situation
     RCLCPP_WARN(get_logger(), "timestamp in wrong order, last: %f, new: %f", last_dataset_stamp_, vec[6]);
@@ -164,8 +167,13 @@ std::tuple<bool, sensor_msgs::msg::LaserScan> DatasetPlayer::parse_laser(const s
   scan.range_max = robot_front_laser_max_;
   scan.ranges = ranges;
   // scan.intensities = ;
+
+  odom.header.frame_id = odom_frame_;
+  odom.header.stamp = scan.header.stamp;
+  odom.child_frame_id = base_frame_;
+  odom.pose.pose = xyt_to_pose(vec[3], vec[4], vec[5]);
   
-  return std::make_tuple(true, scan);
+  return std::make_tuple(true, scan, odom);
 }
 
 std::tuple<bool, nav_msgs::msg::Odometry> DatasetPlayer::parse_odom(const std::string& line, size_t pos) {
@@ -192,14 +200,7 @@ std::tuple<bool, nav_msgs::msg::Odometry> DatasetPlayer::parse_odom(const std::s
   
   odom.child_frame_id = base_frame_;
 
-  odom.pose.pose.position.x = vec[0];
-  odom.pose.pose.position.y = vec[1];
-  odom.pose.pose.position.z = 0;
-  Quaterniond q(AngleAxisd(vec[2], Vector3d::UnitZ()));
-  odom.pose.pose.orientation.x = q.x();
-  odom.pose.pose.orientation.y = q.y();
-  odom.pose.pose.orientation.z = q.z();
-  odom.pose.pose.orientation.w = q.w();
+  odom.pose.pose = xyt_to_pose(vec[0], vec[1], vec[2]);
   // odom.pose.covariance = 
   odom.twist.twist.linear.x = vec[3];
   odom.twist.twist.linear.y = 0;
@@ -287,8 +288,21 @@ void DatasetPlayer::parse_params(const std::string& line, size_t pos) {
     robot_front_laser_max_ = value;
     RCLCPP_INFO(get_logger(), "%s, %f", key.c_str(), value);
   }
+}
 
- 
+geometry_msgs::msg::Pose DatasetPlayer::xyt_to_pose(double x, double y, double theta) {
+  geometry_msgs::msg::Pose pose;
+
+  pose.position.x = x;
+  pose.position.y = y;
+  pose.position.z = 0;
+  Quaterniond q(AngleAxisd(theta, Vector3d::UnitZ()));
+  pose.orientation.x = q.x();
+  pose.orientation.y = q.y();
+  pose.orientation.z = q.z();
+  pose.orientation.w = q.w();
+
+  return pose;
 }
 
 }  // namespace toolkit
