@@ -10,7 +10,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
-namespace toolkit {
+namespace toolkits {
 
 enum class DataType {
   COMMENT,
@@ -56,4 +56,4 @@ class DatasetPlayer : public rclcpp::Node {
   geometry_msgs::msg::Pose xyt_to_pose(double x, double y, double theta);
 };
 
-}  // namespace toolkit
+}  // namespace toolkits

@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
-#include <dataset_player/dataset_player.hpp>
+#include <slamtk/dataset_player.hpp>
 
-using toolkit::DatasetPlayer;
+using toolkits::DatasetPlayer;
 
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);

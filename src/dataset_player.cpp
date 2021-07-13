@@ -3,9 +3,9 @@
 #include <fstream>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <dataset_player/dataset_player.hpp>
+#include <slamtk/dataset_player.hpp>
 
-namespace toolkit {
+namespace toolkits {
 
 using Eigen::Quaterniond;
 using Eigen::AngleAxisd;
@@ -305,4 +305,4 @@ geometry_msgs::msg::Pose DatasetPlayer::xyt_to_pose(double x, double y, double t
   return pose;
 }
 
-}  // namespace toolkit
+}  // namespace toolkits
