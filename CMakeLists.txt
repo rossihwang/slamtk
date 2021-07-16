@@ -24,6 +24,7 @@ find_package(rosgraph_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -35,14 +36,18 @@ set(DEPS
   rosgraph_msgs
   Eigen3
   tf2_ros
+  tf2_geometry_msgs
   )
 include_directories(include)
 
 add_executable(dataset_player_node src/dataset_player.cpp src/dataset_player_node.cpp)
 ament_target_dependencies(dataset_player_node ${DEPS})
 
+add_executable(odom_logger_node src/odom_logger.cpp src/odom_logger_node.cpp)
+ament_target_dependencies(odom_logger_node ${DEPS})
 
 install(TARGETS dataset_player_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS odom_logger_node DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
