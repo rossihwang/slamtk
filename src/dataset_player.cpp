@@ -51,7 +51,7 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
     }
     std::string line;
 
-    while (getline(dataset, line)) {
+    while (getline(dataset, line) && !canceled_.load()) {
       DataType type;
       size_t pos;
       std::tie(type, pos) = check_line_type(line);
@@ -86,7 +86,16 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
               break;
             }
             scan_pub_->publish(scan);
-            odom_pub_->publish(odom);
+            // odom_pub_->publish(odom);
+
+            geometry_msgs::msg::TransformStamped tf_stamped;
+            tf_stamped.header = odom.header;
+            tf_stamped.child_frame_id = odom.child_frame_id;
+            tf_stamped.transform.translation.x = odom.pose.pose.position.x;
+            tf_stamped.transform.translation.y = odom.pose.pose.position.y;
+            tf_stamped.transform.translation.z = odom.pose.pose.position.z;
+            tf_stamped.transform.rotation = odom.pose.pose.orientation;
+            tf_broadcaster_->sendTransform(tf_stamped);
             break;
           }
         case DataType::PARAM:
@@ -104,7 +113,10 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
 }
 
 DatasetPlayer::~DatasetPlayer() {
-
+  canceled_.store(true);
+  if (main_thread_.joinable()) {
+    main_thread_.join();
+  }
 }
 
 std::tuple<DataType, size_t> DatasetPlayer::check_line_type(const std::string& line) {
