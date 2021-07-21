@@ -10,6 +10,7 @@ namespace toolkits {
 using Eigen::Quaterniond;
 using Eigen::AngleAxisd;
 using Eigen::Vector3d;
+using namespace std::literals::chrono_literals;
 
 DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const &options) 
   : Node(name, options),
@@ -17,7 +18,9 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
     base_frame_("base_footprint"),
     odom_frame_("odom"),
     canceled_(false),
-    last_dataset_stamp_(0.0) {
+    last_dataset_stamp_(0.0),
+    odom_queue_(100),
+    scan_queue_(30) {
 
   create_parameter();
 
@@ -29,7 +32,7 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
   static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
   geometry_msgs::msg::TransformStamped base_scan_tf;
-  base_scan_tf.header.stamp = rclcpp::Time(1435.369999 * 1000000000);
+  base_scan_tf.header.stamp = rclcpp::Time(1000000000);
   base_scan_tf.header.frame_id = base_frame_;
   base_scan_tf.child_frame_id = scan_frame_;
   base_scan_tf.transform.translation.x = 0;
@@ -43,6 +46,8 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
 
   set_params();
 
+  publish_thread_ = std::thread(&DatasetPlayer::publish_data, this);
+
   main_thread_ = std::thread{[this]() -> void  {
     std::fstream dataset;
     dataset.open(dataset_file_, std::ios::in);
@@ -51,59 +56,55 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
     }
     std::string line;
 
-    while (getline(dataset, line) && !canceled_.load()) {
-      DataType type;
-      size_t pos;
-      std::tie(type, pos) = check_line_type(line);
-      switch (type) {
-        case DataType::ODOM:
-          {
-            bool state;
-            nav_msgs::msg::Odometry odom;
-            std::tie(state, odom) = parse_odom(line, pos);
-            if (!state) {
+    while (rclcpp::ok() && !canceled_.load()) {
+      if (odom_queue_.full() || scan_queue_.full()) {
+        RCLCPP_WARN(get_logger(), "wait space on queue");
+      } else {
+        getline(dataset, line);
+        DataType type;
+        size_t pos;
+        std::tie(type, pos) = check_line_type(line);
+        switch (type) {
+          case DataType::ODOM:
+            {
+              bool state;
+              nav_msgs::msg::Odometry odom;
+              std::tie(state, odom) = parse_odom(line, pos);
+              if (!state) {
+                break;
+              }
+              {
+                std::lock_guard<std::mutex> lk(odom_queue_mtx_);
+                odom_queue_.push(odom, rclcpp::Time(odom.header.stamp).nanoseconds()/1e9);
+              }
               break;
             }
-            // odom_pub_->publish(odom);
-            
-            geometry_msgs::msg::TransformStamped tf_stamped;
-            tf_stamped.header = odom.header;
-            tf_stamped.child_frame_id = odom.child_frame_id;
-            tf_stamped.transform.translation.x = odom.pose.pose.position.x;
-            tf_stamped.transform.translation.y = odom.pose.pose.position.y;
-            tf_stamped.transform.translation.z = odom.pose.pose.position.z;
-            tf_stamped.transform.rotation = odom.pose.pose.orientation;
-            tf_broadcaster_->sendTransform(tf_stamped);
-            break;
-          }
-        case DataType::FLASER:
-          {
-            bool state;
-            sensor_msgs::msg::LaserScan scan;
-            nav_msgs::msg::Odometry odom;
-            std::tie(state, scan, odom)  = parse_laser(line, pos);
-            if (!state) {
+          case DataType::FLASER:
+            {
+              bool state;
+              sensor_msgs::msg::LaserScan scan;
+              nav_msgs::msg::Odometry odom;
+              std::tie(state, scan, odom)  = parse_laser(line, pos);
+              if (!state) {
+                break;
+              }
+              {
+                std::lock_guard<std::mutex> lk(scan_queue_mtx_);
+                scan_queue_.push(scan, rclcpp::Time(scan.header.stamp).nanoseconds()/1e9);
+              }
+              {
+                std::lock_guard<std::mutex> lk(odom_queue_mtx_);
+                odom_queue_.push(odom, rclcpp::Time(odom.header.stamp).nanoseconds()/1e9);
+              }
               break;
             }
-            scan_pub_->publish(scan);
-            // odom_pub_->publish(odom);
-
-            geometry_msgs::msg::TransformStamped tf_stamped;
-            tf_stamped.header = odom.header;
-            tf_stamped.child_frame_id = odom.child_frame_id;
-            tf_stamped.transform.translation.x = odom.pose.pose.position.x;
-            tf_stamped.transform.translation.y = odom.pose.pose.position.y;
-            tf_stamped.transform.translation.z = odom.pose.pose.position.z;
-            tf_stamped.transform.rotation = odom.pose.pose.orientation;
-            tf_broadcaster_->sendTransform(tf_stamped);
+          case DataType::PARAM:
+            parse_params(line, pos);
             break;
-          }
-        case DataType::PARAM:
-          parse_params(line, pos);
-          break;
-        case DataType::COMMENT:
-        default:
-          std::cout << "unknown" << std::endl;
+          case DataType::COMMENT:
+          default:
+            std::cout << "unknown" << std::endl;
+        }
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
@@ -116,6 +117,9 @@ DatasetPlayer::~DatasetPlayer() {
   canceled_.store(true);
   if (main_thread_.joinable()) {
     main_thread_.join();
+  }
+  if (publish_thread_.joinable()) {
+    publish_thread_.join();
   }
 }
 
@@ -165,10 +169,6 @@ std::tuple<bool, sensor_msgs::msg::LaserScan, nav_msgs::msg::Odometry> DatasetPl
   }
   last_dataset_stamp_ = vec[6];
   
-  rosgraph_msgs::msg::Clock clock;
-  clock.clock = scan.header.stamp;
-  clock_pub_->publish(clock);
-
   scan.header.frame_id = scan_frame_;
   scan.angle_increment = 0.017453292519943295 * laser_front_laser_resolution_;
   scan.angle_min = -M_PI / 2;
@@ -206,10 +206,6 @@ std::tuple<bool, nav_msgs::msg::Odometry> DatasetPlayer::parse_odom(const std::s
   }
   last_dataset_stamp_ = vec[6];
 
-  rosgraph_msgs::msg::Clock clock;
-  clock.clock = odom.header.stamp;
-  clock_pub_->publish(clock);
-  
   odom.child_frame_id = base_frame_;
 
   odom.pose.pose = xyt_to_pose(vec[0], vec[1], vec[2]);
@@ -315,6 +311,52 @@ geometry_msgs::msg::Pose DatasetPlayer::xyt_to_pose(double x, double y, double t
   pose.orientation.w = q.w();
 
   return pose;
+}
+
+void DatasetPlayer::publish_data() {
+
+  rclcpp::Rate rate(500ms);
+  while (rclcpp::ok() && !canceled_.load()) {
+    RCLCPP_INFO(get_logger(), "%d %d", odom_queue_.size(), scan_queue_.size());
+    if (0 < odom_queue_.size() && 0 < scan_queue_.size()) {
+      if (odom_queue_.front().first <= scan_queue_.front().first) {
+        RCLCPP_INFO(get_logger(), "send transform %f", odom_queue_.front().first);
+
+        rosgraph_msgs::msg::Clock clock;
+        clock.clock = odom_queue_.front().second.header.stamp;
+        clock_pub_->publish(clock);
+
+        // odom_pub_->publish(odom_queue_.front().second);
+        geometry_msgs::msg::TransformStamped tf_stamped;
+        tf_stamped.header = odom_queue_.front().second.header;
+        tf_stamped.child_frame_id = odom_queue_.front().second.child_frame_id;
+        tf_stamped.transform.translation.x = odom_queue_.front().second.pose.pose.position.x;
+        tf_stamped.transform.translation.y = odom_queue_.front().second.pose.pose.position.y;
+        tf_stamped.transform.translation.z = odom_queue_.front().second.pose.pose.position.z;
+        tf_stamped.transform.rotation = odom_queue_.front().second.pose.pose.orientation;
+        tf_broadcaster_->sendTransform(tf_stamped);
+        {
+          std::lock_guard<std::mutex> lk(odom_queue_mtx_);
+          odom_queue_.pop();
+        }
+        
+      }  else {
+        RCLCPP_INFO(get_logger(), "publish scan %f", scan_queue_.front().first);
+        
+        rosgraph_msgs::msg::Clock clock;
+        clock.clock = scan_queue_.front().second.header.stamp;
+        clock_pub_->publish(clock);
+
+        scan_pub_->publish(scan_queue_.front().second);
+        {
+          std::lock_guard<std::mutex> lk(scan_queue_mtx_);
+          scan_queue_.pop();
+        }
+        
+      }
+    }
+    rate.sleep();
+  }
 }
 
 }  // namespace toolkits

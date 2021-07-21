@@ -10,6 +10,8 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
+#include <slamtk/sort_queue.hpp>
+
 namespace toolkits {
 
 enum class DataType {
@@ -39,6 +41,12 @@ class DatasetPlayer : public rclcpp::Node {
   // params
   double laser_front_laser_resolution_;
   double robot_front_laser_max_;
+
+  std::thread publish_thread_;
+  std::mutex odom_queue_mtx_;
+  std::mutex scan_queue_mtx_;
+  SortQueue<nav_msgs::msg::Odometry> odom_queue_;
+  SortQueue<sensor_msgs::msg::LaserScan> scan_queue_;
   
  public:
   
@@ -54,6 +62,7 @@ class DatasetPlayer : public rclcpp::Node {
   void set_params();
   void parse_params(const std::string& line, size_t pos);
   geometry_msgs::msg::Pose xyt_to_pose(double x, double y, double theta);
+  void publish_data();
 };
 
 }  // namespace toolkits
