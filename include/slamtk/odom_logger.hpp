@@ -17,6 +17,9 @@ class OdomLogger: public rclcpp::Node {
   std::atomic<bool> canceled_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  double last_stamp_;
+  int repeated_stamp_count_;
+
   // Parameters
   std::string log_filename_;
   std::string base_frame_;

@@ -14,7 +14,9 @@ using std::placeholders::_1;
 
 OdomLogger::OdomLogger(const std::string& name, rclcpp::NodeOptions const& options) 
   : Node(name, options),
-    canceled_(false) {
+    canceled_(false),
+    last_stamp_(0.0),
+    repeated_stamp_count_(0) {
   
   create_parameter();
 
@@ -37,6 +39,7 @@ OdomLogger::OdomLogger(const std::string& name, rclcpp::NodeOptions const& optio
       geometry_msgs::msg::PoseStamped ident;
       geometry_msgs::msg::PoseStamped odom_pose;
       rclcpp::Time stamp = now();
+      double current_stamp = stamp.nanoseconds()/1000000000.0;
       ident.header.frame_id = base_frame_;
       ident.header.stamp = stamp;
       tf2::toMsg(tf2::Transform::getIdentity(), ident.pose);
@@ -64,10 +67,19 @@ OdomLogger::OdomLogger(const std::string& name, rclcpp::NodeOptions const& optio
         % odom_pose.pose.position.x
         % odom_pose.pose.position.y
         % euler(2)
-        % (stamp.nanoseconds()/1000000000.0);
+        % current_stamp;
       log_file << ss.str() << std::endl;
-      RCLCPP_INFO(get_logger(), "%s", ss.str().c_str());
-      
+      if (last_stamp_ == current_stamp) {
+        repeated_stamp_count_++;
+        constexpr int kMaxRepeatStampAmount = 10;
+        if (kMaxRepeatStampAmount < repeated_stamp_count_) {
+          RCLCPP_WARN(get_logger(), "Meet amount of %d continuous repeated stamps, stop logging", kMaxRepeatStampAmount);
+          break;
+        }
+      } else {
+        repeated_stamp_count_ = 0;
+      }
+      last_stamp_ = current_stamp;
       rate.sleep();
     }
   }};
