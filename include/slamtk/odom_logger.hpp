@@ -16,7 +16,7 @@ class OdomLogger: public rclcpp::Node {
   std::atomic<bool> canceled_;
   std::string log_filename_;
   std::string base_frame_;
-  std::string odom_frame_;
+  std::string global_frame_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 

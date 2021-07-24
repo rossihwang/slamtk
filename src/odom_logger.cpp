@@ -14,7 +14,7 @@ OdomLogger::OdomLogger(const std::string& name, rclcpp::NodeOptions const& optio
     canceled_(false),
     log_filename_("estimated_odom.txt"),
     base_frame_("base_footprint"),
-    odom_frame_("odom") {
+    global_frame_("map") {
   
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
@@ -38,7 +38,7 @@ OdomLogger::OdomLogger(const std::string& name, rclcpp::NodeOptions const& optio
       tf2::toMsg(tf2::Transform::getIdentity(), ident.pose);
 
       try {
-        tf_buffer_->transform(ident, odom_pose, odom_frame_, tf2::durationFromSec(0.01));
+        tf_buffer_->transform(ident, odom_pose, global_frame_, tf2::durationFromSec(0.01));
       } catch (tf2::TransformException &e) {
         RCLCPP_ERROR(get_logger(), "%s", e.what());
         continue;
