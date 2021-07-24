@@ -51,6 +51,7 @@ class DatasetPlayer : public rclcpp::Node {
   std::mutex scan_queue_mtx_;
   SortQueue<nav_msgs::msg::Odometry> odom_queue_;
   SortQueue<sensor_msgs::msg::LaserScan> scan_queue_;
+  std::atomic<bool> is_dataset_end_;
   
  public:
   DatasetPlayer(const std::string &name, rclcpp::NodeOptions const &options);
