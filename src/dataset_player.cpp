@@ -231,21 +231,19 @@ std::tuple<bool, nav_msgs::msg::Odometry> DatasetPlayer::parse_odom(const std::s
 
 void DatasetPlayer::create_parameter() {
   dataset_file_ = declare_parameter<std::string>("dataset", "");
+  playback_freq_ = declare_parameter<int>("playback_freq", 5);
 
-  param_cb_ = add_on_set_parameters_callback(std::bind(&DatasetPlayer::update_callback, this, std::placeholders::_1));
+  // set_param_callback_ = add_on_set_parameters_callback(std::bind(&DatasetPlayer::set_parameter_handle, this, std::placeholders::_1));
 }
   
-rcl_interfaces::msg::SetParametersResult DatasetPlayer::update_callback(const std::vector<rclcpp::Parameter>& parameters) {
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
+// rcl_interfaces::msg::SetParametersResult DatasetPlayer::set_parameter_handle(const std::vector<rclcpp::Parameter>& parameters) {
+//   rcl_interfaces::msg::SetParametersResult result;
+//   result.successful = true;
 
-  for (const rclcpp::Parameter &param:  parameters) {
-    if (param.get_name() == "dataset") {
-      dataset_file_ = param.as_string();
-    }
-  }
-  return result;
-}
+//   // for (const rclcpp::Parameter &param:  parameters) {
+//   // }
+//   return result;
+// }
 
 template <typename T>
 size_t DatasetPlayer::parse_as_vector(const std::string& line, size_t pos, size_t size, std::vector<T> *vec) {
@@ -315,7 +313,9 @@ geometry_msgs::msg::Pose DatasetPlayer::xyt_to_pose(double x, double y, double t
 
 void DatasetPlayer::publish_data() {
 
-  rclcpp::Rate rate(500ms);
+  // const int duration_ms = std::round(1.0 / playback_freq_ * 1000);
+  rclcpp::WallRate rate(playback_freq_);
+
   while (rclcpp::ok() && !canceled_.load()) {
     RCLCPP_INFO(get_logger(), "%d %d", odom_queue_.size(), scan_queue_.size());
     if (0 < odom_queue_.size() && 0 < scan_queue_.size()) {

@@ -25,12 +25,14 @@ OdomLogger::OdomLogger(const std::string& name, rclcpp::NodeOptions const& optio
   tf_buffer_->setCreateTimerInterface(timer_interface);
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   main_thread_ = std::thread{[this]() -> void {
-    rclcpp::Rate rate(std::chrono::milliseconds(50));
+    rclcpp::WallRate rate(log_freq_);
     std::fstream log_file;
+
     log_file.open(log_filename_, std::ios::out);
     if (!log_file.is_open()) {
       throw std::runtime_error("Failed to open log file");
     }
+    
     while (rclcpp::ok() && !canceled_.load()) {
       geometry_msgs::msg::PoseStamped ident;
       geometry_msgs::msg::PoseStamped odom_pose;
@@ -83,26 +85,25 @@ void OdomLogger::create_parameter() {
   log_filename_ = declare_parameter<std::string>("log_filename", "estimated_odom.txt");
   base_frame_ = declare_parameter<std::string>("base_frame", "base_footprint");
   global_frame_ = declare_parameter<std::string>("global_frame", "map");
+  log_freq_ = declare_parameter<int>("log_freq", 10);
 
-  set_param_callback_ = add_on_set_parameters_callback(std::bind(&OdomLogger::set_parameter_handle, this, _1));
+  // set_param_callback_ = add_on_set_parameters_callback(std::bind(&OdomLogger::set_parameter_handle, this, _1));
 }
 
-rcl_interfaces::msg::SetParametersResult OdomLogger::set_parameter_handle(const std::vector<rclcpp::Parameter>& parameters) {
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
+// rcl_interfaces::msg::SetParametersResult OdomLogger::set_parameter_handle(const std::vector<rclcpp::Parameter>& parameters) {
+//   rcl_interfaces::msg::SetParametersResult result;
+//   result.successful = true;
 
-  for (const rclcpp::Parameter &param: parameters) {
-    if (param.get_name() == "log_filename") {
-      log_filename_ = param.as_string();
-    } else if (param.get_name() == "base_frame") {
-      base_frame_ = param.as_string();
-    } else if (param.get_name() == "global_frame") {
-      global_frame_ = param.as_string();
-    } else {
-      result.successful = false;
-    }
-  }
-  return result;
-}
+//   // for (const rclcpp::Parameter &param: parameters) {
+//   //   if (param.get_name() == "log_filename") {
+//   //     log_filename_ = param.as_string();
+//   //   } else if (param.get_name() == "base_frame") {
+//   //     base_frame_ = param.as_string();
+//   //   } else if (param.get_name() == "global_frame") {
+//   //     global_frame_ = param.as_string();
+//   //   }
+//   // }
+//   return result;
+// }
 
 }  // namespace toolkits
