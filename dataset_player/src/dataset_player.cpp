@@ -3,9 +3,9 @@
 #include <fstream>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <slamtk/dataset_player.hpp>
+#include <dataset_player/dataset_player.hpp>
 
-namespace toolkits {
+namespace slamtk {
 
 using Eigen::Quaterniond;
 using Eigen::AngleAxisd;
@@ -383,4 +383,4 @@ void DatasetPlayer::publish_data() {
   }
 }
 
-}  // namespace toolkits
+}  // namespace slamtk

@@ -10,9 +10,9 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
-#include <slamtk/sort_queue.hpp>
+#include <dataset_player/sort_queue.hpp>
 
-namespace toolkits {
+namespace slamtk {
 
 enum class DataType {
   COMMENT,
@@ -71,4 +71,4 @@ class DatasetPlayer : public rclcpp::Node {
   void publish_data();
 };
 
-}  // namespace toolkits
+}  // namespace slamtk

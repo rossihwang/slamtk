@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <list>
 
-namespace toolkits {
+namespace slamtk {
 
 template <typename T>
 class SortQueue {
@@ -43,4 +43,4 @@ class SortQueue {
   }
 }; 
 
-}  // namespace toolkits
+}  // namespace slamtk

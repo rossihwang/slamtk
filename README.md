@@ -8,14 +8,15 @@ Toolkits for SLAM
 ### Tools
 
 - dataset player: parsing the CARMEN dataset, and publishing the tf(odom, base_footprint, base_scan) , /scan and /clock
-
 - odom logger: storing the ROS2 estimated poses into CARMEN format(for evaluation)
-
 - metric evaluator: download [here](http://ais.informatik.uni-freiburg.de/slamevaluation/software.php)
+- grid_mapper: building grid map with given scans and correspondent poses
 
 
 
 ### Usages
+
+#### Playing dataset and recording the odometry data for benchmark
 
 In this example, I will walk you through how to evaluate the slam_toolbox with these tools.
 
@@ -33,7 +34,7 @@ In this example, I will walk you through how to evaluate the slam_toolbox with t
 
   ```
   ros2 launch nav2_bringup localization_launch.py use_sim_time:=True map:=MAP_YAML_FILE
-  ros2 run slamtk odom_logger_node --ros-args -p use_sim_time:=True
+  ros2 run odom_logger odom_logger_node --ros-args -p use_sim_time:=True
   ros2 run dataset_player dataset_player_node --ros-args -p dataset:=slam_datasets/ACES\ Building/aces.clf
   ```
 
@@ -42,6 +43,16 @@ In this example, I will walk you through how to evaluate the slam_toolbox with t
   ```
   ./metricEvaluator -s relations_from_odom_logger.txt -r ./ACES_Building/aces.clf -w "{1.0, 1.0, 1.0, 0.0, 0.0, 0.0}"
   ```
+
+#### Building map with grid_mapper
+
+Send a static tf of map and odom
+
+```
+ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map odom
+```
+
+then run the dataset_player and grid_mapper
 
 
 

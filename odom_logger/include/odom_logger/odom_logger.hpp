@@ -9,7 +9,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/create_timer_ros.h>
 
-namespace toolkits {
+namespace slamtk {
 
 class OdomLogger: public rclcpp::Node {
  protected:
@@ -37,4 +37,4 @@ class OdomLogger: public rclcpp::Node {
   // rcl_interfaces::msg::SetParametersResult set_parameter_handle(const std::vector<rclcpp::Parameter>& parameters);
 };
 
-}  // namespace toolkits
+}  // namespace slamtk

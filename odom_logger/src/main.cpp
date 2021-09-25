@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
-#include <slamtk/odom_logger.hpp>
+#include <odom_logger/odom_logger.hpp>
 
-using toolkits::OdomLogger;
+using slamtk::OdomLogger;
 
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);

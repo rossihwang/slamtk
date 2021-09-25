@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(slamtk)
+project(grid_mapper)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -17,37 +17,42 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(rosgraph_msgs REQUIRED)
-find_package(eigen3_cmake_module REQUIRED)
-find_package(Eigen3)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(message_filters REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3)
 
 set(DEPS
   rclcpp
   sensor_msgs
-  nav_msgs
-  rosgraph_msgs
-  Eigen3
+  geometry_msgs
   tf2_ros
   tf2_geometry_msgs
-  )
+  message_filters
+  nav_msgs
+  OpenCV
+  eigen3_cmake_module
+  Eigen3
+)
+
 include_directories(include)
 
-add_executable(dataset_player_node src/dataset_player.cpp src/dataset_player_node.cpp)
-ament_target_dependencies(dataset_player_node ${DEPS})
+add_executable(grid_mapper_node src/grid_mapper.cpp src/main.cpp)
+ament_target_dependencies(grid_mapper_node ${DEPS})
 
-add_executable(odom_logger_node src/odom_logger.cpp src/odom_logger_node.cpp)
-ament_target_dependencies(odom_logger_node ${DEPS})
+add_executable(boundingbox_test test/boundingbox_test.cpp)
+ament_target_dependencies(boundingbox_test ${DEPS})
 
-install(TARGETS dataset_player_node DESTINATION lib/${PROJECT_NAME})
-install(TARGETS odom_logger_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS grid_mapper_node DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
