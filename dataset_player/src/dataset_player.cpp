@@ -239,7 +239,7 @@ std::tuple<bool, nav_msgs::msg::Odometry> DatasetPlayer::parse_odom(const std::s
 
 void DatasetPlayer::create_parameter() {
   dataset_file_ = declare_parameter<std::string>("dataset", "");
-  playback_freq_ = declare_parameter<int>("playback_freq", 5);
+  playback_freq_ = declare_parameter<int>("playback_freq", 60);
 
   // set_param_callback_ = add_on_set_parameters_callback(std::bind(&DatasetPlayer::set_parameter_handle, this, std::placeholders::_1));
 }
@@ -321,7 +321,6 @@ geometry_msgs::msg::Pose DatasetPlayer::xyt_to_pose(double x, double y, double t
 
 void DatasetPlayer::publish_data() {
 
-  // const int duration_ms = std::round(1.0 / playback_freq_ * 1000);
   rclcpp::WallRate rate(playback_freq_);
   bool send_transform, send_scan;
 
