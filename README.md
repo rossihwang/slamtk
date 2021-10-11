@@ -41,7 +41,7 @@ In this example, I will walk you through how to evaluate the slam_toolbox with t
 - Finally run the metric evaluator(use help for more details)
 
   ```
-  ./metricEvaluator -s relations_from_odom_logger.txt -r ./ACES_Building/aces.clf -w "{1.0, 1.0, 1.0, 0.0, 0.0, 0.0}"
+  ./metricEvaluator -s PATH/TO/estimated_odom.txt -r PATH/TO/relations -w "{1.0, 1.0, 1.0, 0.0, 0.0, 0.0}"
   ```
 
 #### Building map with grid_mapper
