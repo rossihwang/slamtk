@@ -8,11 +8,14 @@ Toolkits for SLAM
 ### Tools
 
 - dataset player: parsing the CARMEN dataset, and publishing the tf(odom, base_footprint, base_scan) , /scan and /clock
+
 - odom logger: storing the ROS2 estimated poses into CARMEN format(for evaluation)
+
 - metric evaluator: download [here](http://ais.informatik.uni-freiburg.de/slamevaluation/software.php)
+
 - grid_mapper: building grid map with given scans and correspondent poses
 
-
+  
 
 ### Usages
 
@@ -53,6 +56,20 @@ ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map odom
 ```
 
 then run the dataset_player and grid_mapper
+
+
+
+## Benchmark
+
+For slam_toolbox
+
+| Dataset               | laser maximum range(meter) | mean | std  |
+| --------------------- | -------------------------- | ---- | ---- |
+| 2 MIT Killian Court   |                            |      |      |
+| ACES Building         | 50                         |      |      |
+| Freiburg Building 101 |                            |      |      |
+| Interl Research Lab   |                            |      |      |
+| MIT CSAIL Building    |                            |      |      |
 
 
 
