@@ -61,15 +61,21 @@ then run the dataset_player and grid_mapper
 
 ## Benchmark
 
-For slam_toolbox
+- slam_toolbox
+  - branch: foxy-devel
+  - commit: ebcee231186c14f00671cf3fe41942f448bb9577
+  - optimized parameters
+    - loop_search_maximum_distance: 10.0
+    - loop_match_minimum_response_coarse: 0.25
+    - loop_match_minimum_response_fine: 0.65
 
-| Dataset               | laser maximum range(meter) | mean | std  |
-| --------------------- | -------------------------- | ---- | ---- |
-| 2 MIT Killian Court   |                            |      |      |
-| ACES Building         | 50                         |      |      |
-| Freiburg Building 101 |                            |      |      |
-| Interl Research Lab   |                            |      |      |
-| MIT CSAIL Building    |                            |      |      |
+| Dataset                      | laser maximum range(meter) | mean | std  | initial pose | playback freq. |
+| ---------------------------- | -------------------------- | ---- | ---- | ------------ | -------------- |
+| 2 MIT Killian Court          | 51.060                     |      |      | (1.91, 37.8) | 13             |
+| ACES Building                | 50.0                       |      |      |              | 25             |
+| Freiburg Indoor Building 079 | 50.0                       |      |      |              |                |
+| Interl Research Lab          | 81.83                      |      |      |              |                |
+| MIT CSAIL Building           | 81.91                      |      |      |              |                |
 
 
 
