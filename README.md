@@ -69,13 +69,13 @@ then run the dataset_player and grid_mapper
     - loop_match_minimum_response_coarse: 0.25
     - loop_match_minimum_response_fine: 0.65
 
-| Dataset                      | laser maximum range(meter) | mean | std  | initial pose | playback freq. |
-| ---------------------------- | -------------------------- | ---- | ---- | ------------ | -------------- |
-| 2 MIT Killian Court          | 51.060                     |      |      | (1.91, 37.8) | 13             |
-| ACES Building                | 50.0                       |      |      |              | 25             |
-| Freiburg Indoor Building 079 | 50.0                       |      |      |              |                |
-| Interl Research Lab          | 81.83                      |      |      |              |                |
-| MIT CSAIL Building           | 81.91                      |      |      |              |                |
+| Dataset                      | laser maximum range(meter) | mean | std  | initial pose | playback freq. | angle resolution |
+| ---------------------------- | -------------------------- | ---- | ---- | ------------ | -------------- | ---------------- |
+| 2 MIT Killian Court          | 51.060                     |      |      | (1.91, 37.8) | 10             | 1.0              |
+| ACES Building                | 50.0                       |      |      | (0, 0)       | 25             | 1.0              |
+| Freiburg Indoor Building 079 | 50.0                       |      |      | (-3.03, 8.3) | 25             | 1.0              |
+| Intel Research Lab           | 81.83                      |      |      | (0, 0)       | 25             | 1.0              |
+| MIT CSAIL Building           | 81.91                      |      |      |              | 25             | 0.5              |
 
 
 
