@@ -45,7 +45,7 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
   base_scan_tf.transform.rotation.w = 1;
   static_broadcaster_->sendTransform(base_scan_tf);
 
-  set_params();
+  // set_params();
 
   publish_thread_ = std::thread(&DatasetPlayer::publish_data, this);
 
@@ -107,7 +107,7 @@ DatasetPlayer::DatasetPlayer(const std::string &name, rclcpp::NodeOptions const 
               break;
             }
           case DataType::PARAM:
-            parse_params(line, pos);
+            // parse_params(line, pos);
             break;
           case DataType::COMMENT:
           default:
@@ -241,6 +241,37 @@ void DatasetPlayer::create_parameter() {
   dataset_file_ = declare_parameter<std::string>("dataset", "");
   playback_freq_ = declare_parameter<int>("playback_freq", 25);  // NOTE: recommand for 25, faster speed will lead to no buffered data for reordering
 
+
+  auto get_filename = [](const std::string& s) -> std::string {
+    char sep = '/';
+    size_t i = s.rfind(sep, s.length());
+    if (i != std::string::npos) {
+      return(s.substr(i+1, s.length() - i));
+    }
+    return("");
+  };
+
+  // Some presets for known datasets
+  std::string base = get_filename(dataset_file_);
+  if (base == "mit-killian.clf") {
+    laser_front_laser_resolution_ = 1.0;
+    robot_front_laser_max_ = 51.060;
+  } else if (base == "aces.clf") {
+    laser_front_laser_resolution_ = 1.0;
+    robot_front_laser_max_ = 50.0;
+  } else if (base == "fr079.clf") {
+    laser_front_laser_resolution_ = 1.0;
+    robot_front_laser_max_ = 50.0;
+  } else if (base == "intel.clf") {
+    laser_front_laser_resolution_ = 1.0;
+    robot_front_laser_max_ = 81.83;
+  } else if (base == "mit-csail.clf") {
+    laser_front_laser_resolution_ = 0.5;
+    robot_front_laser_max_ = 81.91;
+  } else {
+    RCLCPP_ERROR(get_logger(), "Unknown dataset");
+    exit(1);
+  }
   // set_param_callback_ = add_on_set_parameters_callback(std::bind(&DatasetPlayer::set_parameter_handle, this, std::placeholders::_1));
 }
   
@@ -283,7 +314,7 @@ size_t DatasetPlayer::parse_as_vector(const std::string& line, size_t pos, size_
 }
 
 void DatasetPlayer::set_params() {
-  laser_front_laser_resolution_ = 1.0;
+  laser_front_laser_resolution_ = 0.5;
   robot_front_laser_max_ = 50.0;
 }
 
