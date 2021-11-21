@@ -354,8 +354,8 @@ void DatasetPlayer::publish_data() {
 
   rclcpp::WallRate rate(playback_freq_);
   bool send_transform, send_scan;
-  std::pair<double, nav_msgs::msg::Odometry> stamped_odom_data;
-  std::pair<double, sensor_msgs::msg::LaserScan> stamped_scan_data;
+  StampedData<nav_msgs::msg::Odometry> stamped_odom_data;
+  StampedData<sensor_msgs::msg::LaserScan> stamped_scan_data;
   std::unique_lock<std::mutex> odom_lk(odom_queue_mtx_, std::defer_lock);
   std::unique_lock<std::mutex> scan_lk(scan_queue_mtx_, std::defer_lock);
 
@@ -367,21 +367,21 @@ void DatasetPlayer::publish_data() {
     odom_lk.lock();
     scan_lk.lock();
     if (0 < odom_queue_.size() && 0 < scan_queue_.size()) {
-      if (odom_queue_.front().first <= scan_queue_.front().first) {
-        stamped_odom_data = odom_queue_.front();
+      if (odom_queue_.top().stamp <= scan_queue_.top().stamp) {
+        stamped_odom_data = odom_queue_.top();
         odom_queue_.pop();
         send_transform = true;
       } else {
-        stamped_scan_data = scan_queue_.front();
+        stamped_scan_data = scan_queue_.top();
         scan_queue_.pop();
         send_scan = true;
       }
     } else if (0 < odom_queue_.size()) {
-      stamped_odom_data = odom_queue_.front();
+      stamped_odom_data = odom_queue_.top();
       odom_queue_.pop();
       send_transform = true;
     } else if (0 < scan_queue_.size()) {
-      stamped_scan_data = scan_queue_.front();
+      stamped_scan_data = scan_queue_.top();
       scan_queue_.pop();
       send_scan = true;
     } else if (is_dataset_end_) {
@@ -392,30 +392,30 @@ void DatasetPlayer::publish_data() {
     odom_lk.unlock();
 
     if (send_transform) {
-      RCLCPP_INFO(get_logger(), "send transform %f", stamped_odom_data.first);
+      RCLCPP_INFO(get_logger(), "send transform %f", stamped_odom_data.stamp);
 
       rosgraph_msgs::msg::Clock clock;
-      clock.clock = stamped_odom_data.second.header.stamp;
+      clock.clock = stamped_odom_data.data.header.stamp;
       clock_pub_->publish(clock);
 
       // odom_pub_->publish(odom_data);
       geometry_msgs::msg::TransformStamped tf_stamped;
-      tf_stamped.header = stamped_odom_data.second.header;
-      tf_stamped.child_frame_id = stamped_odom_data.second.child_frame_id;
-      tf_stamped.transform.translation.x = stamped_odom_data.second.pose.pose.position.x;
-      tf_stamped.transform.translation.y = stamped_odom_data.second.pose.pose.position.y;
-      tf_stamped.transform.translation.z = stamped_odom_data.second.pose.pose.position.z;
-      tf_stamped.transform.rotation = stamped_odom_data.second.pose.pose.orientation;
+      tf_stamped.header = stamped_odom_data.data.header;
+      tf_stamped.child_frame_id = stamped_odom_data.data.child_frame_id;
+      tf_stamped.transform.translation.x = stamped_odom_data.data.pose.pose.position.x;
+      tf_stamped.transform.translation.y = stamped_odom_data.data.pose.pose.position.y;
+      tf_stamped.transform.translation.z = stamped_odom_data.data.pose.pose.position.z;
+      tf_stamped.transform.rotation = stamped_odom_data.data.pose.pose.orientation;
       tf_broadcaster_->sendTransform(tf_stamped);
       
     } else if (send_scan) {
-      RCLCPP_INFO(get_logger(), "publish scan %f", stamped_scan_data.first);
+      RCLCPP_INFO(get_logger(), "publish scan %f", stamped_scan_data.stamp);
       
       rosgraph_msgs::msg::Clock clock;
-      clock.clock = stamped_scan_data.second.header.stamp;
+      clock.clock = stamped_scan_data.data.header.stamp;
       clock_pub_->publish(clock);
 
-      scan_pub_->publish(stamped_scan_data.second);
+      scan_pub_->publish(stamped_scan_data.data);
       
     }
     rate.sleep();

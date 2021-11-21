@@ -3,15 +3,31 @@
 #pragma once
 
 #include <cstdio>
-#include <list>
+#include <queue>
 
 namespace slamtk {
+
+template <typename T>
+struct StampedData {
+  double stamp;
+  T data;
+  StampedData(double stamp, T data)
+    : stamp(stamp),
+      data(data) {}
+  StampedData()
+    : stamp(0.0) {}
+};
+
+template <typename T>
+bool operator<(const StampedData<T>& a, const StampedData<T>& b) {
+  return b.stamp < a.stamp;
+}
 
 template <typename T>
 class SortQueue {
  protected:
   size_t limit_size_;
-  std::list<std::pair<double, T>> list_;
+  std::priority_queue<StampedData<T>> q_;
 
  public:
   SortQueue(size_t size)
@@ -20,26 +36,19 @@ class SortQueue {
   }
   ~SortQueue() = default;
   void push(T data, double stamp) {
-    list_.push_back(std::make_pair(stamp, data));
-    list_.sort([](const std::pair<double, T>& a, const std::pair<double, T>& b) {
-                return a.first < b.first;
-              });
-    // for (auto l: list_) {
-    //   printf("%.6f, ", l.first);
-    // }
-    // std::cout << std::endl;
+    q_.push(StampedData<T>(stamp, data));
   }
   void pop() {
-    list_.pop_front();
+    q_.pop();
   }
-  std::pair<double,  T> front() {
-    return list_.front();
+  StampedData<T> top() {
+    return q_.top();
   }
   bool full() {
-    return limit_size_ <= list_.size();
+    return limit_size_ <= q_.size();
   }
   size_t size() {
-    return list_.size();
+    return q_.size();
   }
 }; 
 
